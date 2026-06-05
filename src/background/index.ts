@@ -196,6 +196,9 @@ async function downloadSubtitle(fileId: number): Promise<string> {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch(() => {});
   chrome.storage.local.get(Object.keys(DEFAULT_DATA)).then((data) => {
     const updates: Partial<StoredData> = {};
     for (const [key, value] of Object.entries(DEFAULT_DATA)) {
@@ -207,6 +210,12 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set(updates);
     }
   });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch(() => {});
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
