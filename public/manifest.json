@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Subtitle Studio",
+  "version": "1.0.0",
+  "description": "Universal subtitle overlay studio with dual-track rendering.",
+  "permissions": ["storage", "tabs", "activeTab", "scripting", "sidePanel"],
+  "host_permissions": ["<all_urls>", "https://api.opensubtitles.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Subtitle Studio"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Open Subtitle Studio side panel"
+    }
+  }
+}
