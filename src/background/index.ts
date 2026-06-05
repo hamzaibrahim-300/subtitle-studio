@@ -198,7 +198,9 @@ async function downloadSubtitle(fileId: number): Promise<string> {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch(() => {});
+    .catch((error) => {
+      console.warn('Failed to configure side panel action behavior on install.', error);
+    });
   chrome.storage.local.get(Object.keys(DEFAULT_DATA)).then((data) => {
     const updates: Partial<StoredData> = {};
     for (const [key, value] of Object.entries(DEFAULT_DATA)) {
@@ -215,7 +217,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch(() => {});
+    .catch((error) => {
+      console.warn('Failed to configure side panel action behavior on startup.', error);
+    });
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
