@@ -50,6 +50,10 @@ const state: LocalState = {
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('App root not found');
 
+function sanitizeDisplayText(value: string): string {
+  return value.replace(/[\u0000-\u001F\u007F]/g, '').slice(0, 220);
+}
+
 function setStatus(message: string): void {
   const el = document.querySelector<HTMLElement>('#video-status');
   if (el) {
@@ -102,12 +106,32 @@ function renderSearchResults(): void {
   for (const result of state.searchResults) {
     const card = document.createElement('div');
     card.className = 'section';
-    card.innerHTML = `<div class="row"><strong>${result.fileName}</strong> <span class="badge">${result.score}%</span></div>
-      <div class="small">${result.language}${result.release ? ` • ${result.release}` : ''}</div>
-      <div class="row" style="margin-top:6px">
-        <button data-load="0">Load primary</button>
-        <button data-load="1">Load secondary</button>
-      </div>`;
+    const heading = document.createElement('div');
+    heading.className = 'row';
+    const strong = document.createElement('strong');
+    strong.textContent = sanitizeDisplayText(result.fileName);
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = `${result.score}%`;
+    heading.append(strong, badge);
+
+    const detail = document.createElement('div');
+    detail.className = 'small';
+    detail.textContent = sanitizeDisplayText(
+      `${result.language}${result.release ? ` • ${result.release}` : ''}`
+    );
+
+    const actions = document.createElement('div');
+    actions.className = 'row';
+    actions.style.marginTop = '6px';
+    const primaryButton = document.createElement('button');
+    primaryButton.dataset.load = '0';
+    primaryButton.textContent = 'Load primary';
+    const secondaryButton = document.createElement('button');
+    secondaryButton.dataset.load = '1';
+    secondaryButton.textContent = 'Load secondary';
+    actions.append(primaryButton, secondaryButton);
+    card.append(heading, detail, actions);
 
     card.querySelectorAll<HTMLButtonElement>('button[data-load]').forEach((button) => {
       button.addEventListener('click', async () => {
@@ -155,9 +179,15 @@ function renderLibrary(): void {
   for (const entry of history) {
     const row = document.createElement('div');
     row.className = 'row';
-    row.innerHTML = `<span>${entry.fileName}</span><span class="small">${entry.source}</span>
-      <button data-fav="${entry.id}">${entry.favorited ? '★' : '☆'}</button>`;
-    row.querySelector('button')?.addEventListener('click', async () => {
+    const fileName = document.createElement('span');
+    fileName.textContent = sanitizeDisplayText(entry.fileName);
+    const source = document.createElement('span');
+    source.className = 'small';
+    source.textContent = entry.source;
+    const favButton = document.createElement('button');
+    favButton.dataset.fav = entry.id;
+    favButton.textContent = entry.favorited ? '★' : '☆';
+    favButton.addEventListener('click', async () => {
       const payload = await sendToBackground<{ library: LibraryEntry[] }>({
         type: 'BG_TOGGLE_FAVORITE',
         id: entry.id
@@ -165,6 +195,7 @@ function renderLibrary(): void {
       state.library = payload.library;
       renderLibrary();
     });
+    row.append(fileName, source, favButton);
     list.append(row);
   }
 }
@@ -181,20 +212,20 @@ function createTrackControls(slot: 0 | 1): string {
         <button data-reset="${slot}">Reset</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <label>Size <input type="range" min="16" max="72" value="${state.styles[slot].fontSize}" data-style="${slot}:fontSize" /></label>
-        <label>Pos <input type="range" min="10" max="95" value="${state.styles[slot].verticalPercent}" data-style="${slot}:verticalPercent" /></label>
+        <label>Size <input type="range" min="16" max="72" value="28" data-style="${slot}:fontSize" /></label>
+        <label>Pos <input type="range" min="10" max="95" value="84" data-style="${slot}:verticalPercent" /></label>
       </div>
       <div class="row" style="margin-top:8px">
-        <label>Color <input type="color" value="${state.styles[slot].color}" data-style="${slot}:color" /></label>
-        <label>Background <input type="text" value="${state.styles[slot].background}" data-style="${slot}:background" /></label>
+        <label>Color <input type="color" value="#ffffff" data-style="${slot}:color" /></label>
+        <label>Background <input type="text" value="" data-style="${slot}:background" /></label>
       </div>
       <div class="row" style="margin-top:8px">
-        <label>Font <input type="text" value="${state.styles[slot].fontFamily}" data-style="${slot}:fontFamily" /></label>
-        <label>Opacity <input type="range" min="0.1" max="1" step="0.05" value="${state.styles[slot].opacity}" data-style="${slot}:opacity" /></label>
+        <label>Font <input type="text" value="Inter, Arial, sans-serif" data-style="${slot}:fontFamily" /></label>
+        <label>Opacity <input type="range" min="0.1" max="1" step="0.05" value="1" data-style="${slot}:opacity" /></label>
       </div>
       <div class="row" style="margin-top:8px">
-        <label>Outline <input type="text" value="${state.styles[slot].outline}" data-style="${slot}:outline" /></label>
-        <label>Shadow <input type="text" value="${state.styles[slot].shadow}" data-style="${slot}:shadow" /></label>
+        <label>Outline <input type="text" value="2px #000000" data-style="${slot}:outline" /></label>
+        <label>Shadow <input type="text" value="0 2px 6px rgba(0,0,0,0.9)" data-style="${slot}:shadow" /></label>
       </div>
     </div>
   `;
@@ -227,7 +258,7 @@ function renderApp(): void {
         <input id="search-language" placeholder="Lang" value="en" style="width:74px" />
       </div>
       <div class="row" style="margin-top:8px">
-        <input id="api-key" placeholder="OpenSubtitles API key" value="${state.settings.openSubtitlesApiKey}" style="flex:1" />
+        <input id="api-key" placeholder="OpenSubtitles API key" style="flex:1" />
         <button id="save-api-key">Save key</button>
         <button id="search-btn">Search</button>
       </div>
@@ -250,6 +281,24 @@ function renderApp(): void {
   bindSyncButtons();
   bindStyleControls();
   bindApiKeyControls();
+  syncControlValues();
+}
+
+function syncControlValues(): void {
+  const apiInput = document.querySelector<HTMLInputElement>('#api-key');
+  if (apiInput) {
+    apiInput.value = state.settings.openSubtitlesApiKey;
+  }
+
+  document.querySelectorAll<HTMLInputElement>('input[data-style]').forEach((input) => {
+    const [slotValue, key] = (input.dataset.style || '0:fontSize').split(':');
+    const slot = Number(slotValue) as 0 | 1;
+    const value = (state.styles[slot] as any)[key];
+    if (typeof value === 'undefined') {
+      return;
+    }
+    input.value = String(value);
+  });
 }
 
 async function addLibraryUpload(fileName: string, slot: 0 | 1): Promise<void> {
@@ -386,6 +435,7 @@ async function bootstrap(): Promise<void> {
   });
   state.settings = storage.data.settings;
   state.library = storage.data.library;
+  syncControlValues();
   await refreshStatus();
   renderSearchResults();
   renderLibrary();

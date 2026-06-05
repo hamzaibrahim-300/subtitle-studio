@@ -25,6 +25,14 @@ const DEFAULT_DATA: StoredData = {
 };
 
 const OPEN_SUBTITLES_BASE = 'https://api.opensubtitles.com/api/v1';
+const TITLE_SIMILARITY_WEIGHT = 55;
+const YEAR_MATCH_BASE = 20;
+const YEAR_PENALTY = 6;
+const SEASON_EXACT_BONUS = 12;
+const EPISODE_EXACT_BONUS = 12;
+const RUNTIME_MATCH_BASE = 8;
+const RUNTIME_PENALTY_DIVISOR = 20;
+const RATING_MAX_BONUS = 8;
 
 async function getStoredData(): Promise<StoredData> {
   const data = await chrome.storage.local.get(Object.keys(DEFAULT_DATA));
@@ -58,21 +66,26 @@ function similarity(a: string, b: string): number {
 function scoreResult(query: SubtitleSearchQuery, raw: any): number {
   const attributes = raw.attributes ?? {};
   const feature = attributes.feature_details ?? {};
-  let score = similarity(query.title, attributes.release ?? attributes.files?.[0]?.file_name ?? '') * 55;
+  let score =
+    similarity(query.title, attributes.release ?? attributes.files?.[0]?.file_name ?? '') *
+    TITLE_SIMILARITY_WEIGHT;
 
   if (query.year && feature.year) {
-    score += Math.max(0, 20 - Math.abs(query.year - feature.year) * 6);
+    score += Math.max(0, YEAR_MATCH_BASE - Math.abs(query.year - feature.year) * YEAR_PENALTY);
   }
   if (query.season && feature.season_number) {
-    score += query.season === feature.season_number ? 12 : 0;
+    score += query.season === feature.season_number ? SEASON_EXACT_BONUS : 0;
   }
   if (query.episode && feature.episode_number) {
-    score += query.episode === feature.episode_number ? 12 : 0;
+    score += query.episode === feature.episode_number ? EPISODE_EXACT_BONUS : 0;
   }
   if (query.runtime && feature.movie_duration) {
-    score += Math.max(0, 8 - Math.abs(query.runtime - feature.movie_duration) / 20);
+    score += Math.max(
+      0,
+      RUNTIME_MATCH_BASE - Math.abs(query.runtime - feature.movie_duration) / RUNTIME_PENALTY_DIVISOR
+    );
   }
-  score += Math.min(8, Number(attributes.ratings ?? 0));
+  score += Math.min(RATING_MAX_BONUS, Number(attributes.ratings ?? 0));
 
   return Math.min(100, Math.round(score));
 }

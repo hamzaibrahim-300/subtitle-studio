@@ -31,7 +31,7 @@ npm install
 npm run build
 ```
 
-Build output is generated in `/tmp/workspace/hamzaibrahim-300/subtitle-studio/dist`.
+Build output is generated in `./dist`.
 
 ## Run in Chrome
 
@@ -39,7 +39,7 @@ Build output is generated in `/tmp/workspace/hamzaibrahim-300/subtitle-studio/di
 2. Open `chrome://extensions`.
 3. Enable **Developer mode**.
 4. Click **Load unpacked**.
-5. Select `/tmp/workspace/hamzaibrahim-300/subtitle-studio/dist`.
+5. Select the `./dist` directory.
 6. Open the side panel from the extension action.
 
 ## OpenSubtitles setup

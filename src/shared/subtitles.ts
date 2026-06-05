@@ -5,7 +5,8 @@ export interface IndexedCues {
   starts: number[];
 }
 
-const TIMING_ARROW = /-->/;
+const hasTimingArrow = (value: string): boolean => value.includes('-->');
+const CUE_SEARCH_WINDOW = 4;
 
 function parseClockToSeconds(value: string): number {
   const normalized = value.trim().replace(',', '.');
@@ -25,7 +26,6 @@ function parseAssClockToSeconds(value: string): number {
 function normalizeText(value: string): string {
   return value
     .replace(/\{\\[^}]+\}/g, '')
-    .replace(/<[^>]+>/g, '')
     .replace(/\\N/g, '\n')
     .replace(/\r/g, '')
     .trim();
@@ -40,12 +40,12 @@ function parseSrt(input: string): SubtitleCue[] {
     if (lines.length < 2) {
       continue;
     }
-    const timingLine = TIMING_ARROW.test(lines[0]) ? lines[0] : lines[1];
-    if (!TIMING_ARROW.test(timingLine)) {
+    const timingLine = hasTimingArrow(lines[0]) ? lines[0] : lines[1];
+    if (!hasTimingArrow(timingLine)) {
       continue;
     }
     const [start, end] = timingLine.split('-->').map((part) => parseClockToSeconds(part));
-    const textStart = TIMING_ARROW.test(lines[0]) ? 1 : 2;
+    const textStart = hasTimingArrow(lines[0]) ? 1 : 2;
     const text = normalizeText(lines.slice(textStart).join('\n'));
     if (text) {
       cues.push({ start, end, text });
@@ -67,8 +67,8 @@ function parseVtt(input: string): SubtitleCue[] {
       continue;
     }
 
-    const timingLine = TIMING_ARROW.test(line) ? line : lines[index + 1]?.trim();
-    if (!timingLine || !TIMING_ARROW.test(timingLine)) {
+    const timingLine = hasTimingArrow(line) ? line : lines[index + 1]?.trim();
+    if (!timingLine || !hasTimingArrow(timingLine)) {
       index += 1;
       continue;
     }
@@ -77,7 +77,7 @@ function parseVtt(input: string): SubtitleCue[] {
     const start = parseClockToSeconds(startPart);
     const end = parseClockToSeconds(endPart.trim().split(' ')[0]);
 
-    index += TIMING_ARROW.test(line) ? 1 : 2;
+    index += hasTimingArrow(line) ? 1 : 2;
     const textLines: string[] = [];
     while (index < lines.length && lines[index].trim() !== '') {
       textLines.push(lines[index]);
@@ -201,14 +201,22 @@ export function findCue(indexed: IndexedCues, timeInSeconds: number): SubtitleCu
     }
   }
 
-  for (let index = Math.max(best, 0); index >= 0 && index >= best - 4; index -= 1) {
+  for (
+    let index = Math.max(best, 0);
+    index >= 0 && index >= best - CUE_SEARCH_WINDOW;
+    index -= 1
+  ) {
     const cue = cues[index];
     if (cue.start <= timeInSeconds && cue.end >= timeInSeconds) {
       return cue;
     }
   }
 
-  for (let index = Math.max(best + 1, 0); index < cues.length && index <= best + 4; index += 1) {
+  for (
+    let index = Math.max(best + 1, 0);
+    index < cues.length && index <= best + CUE_SEARCH_WINDOW;
+    index += 1
+  ) {
     const cue = cues[index];
     if (cue.start <= timeInSeconds && cue.end >= timeInSeconds) {
       return cue;
